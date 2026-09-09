@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SIMD Vektör İşlemci Simülatörü</title>
+  <meta name="description" content="128-bit SSE benzeri SIMD Vektör İşlemci Simülatörü - Pipeline görselleştirmesi, register ve bellek monitörü ile interaktif assembly editörü." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="8" width="10" height="24" rx="2" fill="url(#grad1)"/>
+          <rect x="15" y="4" width="10" height="32" rx="2" fill="url(#grad2)"/>
+          <rect x="28" y="10" width="10" height="20" rx="2" fill="url(#grad3)"/>
+          <defs>
+            <linearGradient id="grad1" x1="2" y1="8" x2="12" y2="32" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#6366f1"/>
+              <stop offset="1" stop-color="#8b5cf6"/>
+            </linearGradient>
+            <linearGradient id="grad2" x1="15" y1="4" x2="25" y2="36" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#06b6d4"/>
+              <stop offset="1" stop-color="#3b82f6"/>
+            </linearGradient>
+            <linearGradient id="grad3" x1="28" y1="10" x2="38" y2="30" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#10b981"/>
+              <stop offset="1" stop-color="#06b6d4"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <div class="header-title">
+        <h1>SIMD Vector Processor</h1>
+        <span class="header-subtitle">128-bit SSE Simulator &middot; Mimari Dersi Projesi</span>
+      </div>
+    </div>
+    <div class="header-controls">
+      <div class="status-badge" id="status-badge">
+        <span class="status-dot"></span>
+        <span id="status-text">Hazır</span>
+      </div>
+      <button class="btn btn-ghost" id="btn-clear-all" title="Tümünü Temizle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        Sıfırla
+      </button>
+      <button class="btn btn-ghost" id="btn-export-csv" title="Sonuçları Excel/CSV olarak indir">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Excel/CSV İndir
+      </button>
+      <button class="btn btn-ghost" id="btn-load-demo" title="Demo Yükle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Demo Yükle
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <main class="app-main">
+
+    <!-- LEFT PANEL: Editor + Controls -->
+    <aside class="panel panel-left">
+
+      <!-- Code Editor -->
+      <div class="card editor-card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            Assembly Editörü
+          </div>
+          <div class="card-actions">
+            <button class="btn-icon" id="btn-copy" title="Kopyala">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="editor-wrapper">
+          <div class="line-numbers" id="line-numbers">1</div>
+          <textarea id="code-editor" spellcheck="false" placeholder="; SIMD komutlarini buraya yazin"></textarea>
+        </div>
+        <div class="editor-footer">
+          <span class="editor-hint">Ctrl+Enter: Çalıştır | F8: Adım At</span>
+          <span id="cursor-pos">Satır 1, Sütun 1</span>
+        </div>
+      </div>
+
+      <!-- Execution Controls -->
+      <div class="card controls-card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Çalıştırma Kontrolleri
+          </div>
+        </div>
+        <div class="controls-grid">
+          <button class="btn btn-primary" id="btn-run">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Çalıştır
+          </button>
+          <button class="btn btn-secondary" id="btn-step">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 15 12 5 21 5 3"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+            Adım At
+          </button>
+          <button class="btn btn-secondary" id="btn-stop" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+            Durdur
+          </button>
+          <button class="btn btn-ghost" id="btn-reset">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.96"/></svg>
+            Sıfırla
+          </button>
+        </div>
+        <div class="speed-control">
+          <label for="speed-slider">Animasyon Hizi</label>
+          <input type="range" id="speed-slider" min="100" max="2000" value="700" step="100" />
+          <span id="speed-val">700ms</span>
+        </div>
+      </div>
+
+      <!-- Instruction Set Reference -->
+      <div class="card isa-card">
+        <div class="card-header collapsible" id="isa-toggle">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Komut Seti Referansı
+          </div>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="isa-body" id="isa-body">
+          <div class="isa-category">
+            <div class="isa-cat-title">Bellek İşlemleri</div>
+            <div class="isa-item"><code>VLOAD Vd, [addr]</code><span>Bellekten vektör yükle</span></div>
+            <div class="isa-item"><code>VSTORE Vs, [addr]</code><span>Vektörü belleğe yaz</span></div>
+            <div class="isa-item"><code>VSET Vd, a,b,c,d</code><span>Vektörü doğrudan ata</span></div>
+          </div>
+          <div class="isa-category">
+            <div class="isa-cat-title">Aritmetik</div>
+            <div class="isa-item"><code>VADD Vd, Vs1, Vs2</code><span>Paralel toplama</span></div>
+            <div class="isa-item"><code>VSUB Vd, Vs1, Vs2</code><span>Paralel çikarma</span></div>
+            <div class="isa-item"><code>VMUL Vd, Vs1, Vs2</code><span>Paralel çarpma</span></div>
+            <div class="isa-item"><code>VDIV Vd, Vs1, Vs2</code><span>Paralel bölme</span></div>
+            <div class="isa-item"><code>VDOT Vd, Vs1, Vs2</code><span>Dot product</span></div>
+            <div class="isa-item"><code>VABS Vd, Vs</code><span>Mutlak deger</span></div>
+            <div class="isa-item"><code>VMAX Vd, Vs1, Vs2</code><span>Eleman bazli maksimum</span></div>
+            <div class="isa-item"><code>VMIN Vd, Vs1, Vs2</code><span>Eleman bazli minimum</span></div>
+          </div>
+          <div class="isa-category">
+            <div class="isa-cat-title">Mantık ve Bit</div>
+            <div class="isa-item"><code>VAND Vd, Vs1, Vs2</code><span>Bitwise AND</span></div>
+            <div class="isa-item"><code>VOR Vd, Vs1, Vs2</code><span>Bitwise OR</span></div>
+            <div class="isa-item"><code>VXOR Vd, Vs1, Vs2</code><span>Bitwise XOR</span></div>
+            <div class="isa-item"><code>VNOT Vd, Vs</code><span>Bitwise NOT</span></div>
+            <div class="isa-item"><code>VSHL Vd, Vs, n</code><span>Sola bit kaydırma</span></div>
+            <div class="isa-item"><code>VSHR Vd, Vs, n</code><span>Sağa bit kaydırma</span></div>
+          </div>
+          <div class="isa-category">
+            <div class="isa-cat-title">Karşılaştırma</div>
+            <div class="isa-item"><code>VCMPEQ Vd, Vs1, Vs2</code><span>Eşitlik maskesi</span></div>
+            <div class="isa-item"><code>VCMPGT Vd, Vs1, Vs2</code><span>Büyüktür maskesi</span></div>
+            <div class="isa-item"><code>VCMPLT Vd, Vs1, Vs2</code><span>Küçüktür maskesi</span></div>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- CENTER PANEL: Pipeline + Output -->
+    <section class="panel panel-center">
+
+      <!-- Pipeline Visualization -->
+      <div class="card pipeline-card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+            Pipeline Görselleştirmesi
+          </div>
+          <div class="pipeline-pc-badge">PC: <span id="pipeline-pc">0x0000</span></div>
+        </div>
+        <div class="pipeline-stages">
+          <div class="pipeline-stage" id="stage-fetch">
+            <div class="stage-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <div class="stage-name">FETCH</div>
+            <div class="stage-desc">Komut Çekimi</div>
+            <div class="stage-instr" id="fetch-instr">—</div>
+          </div>
+          <div class="pipeline-arrow">
+            <svg viewBox="0 0 40 24" fill="none"><path d="M0 12 L32 12 L24 6 M32 12 L24 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </div>
+          <div class="pipeline-stage" id="stage-decode">
+            <div class="stage-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M12 2v2M12 20v2M20 12h2M2 12h2"/></svg>
+            </div>
+            <div class="stage-name">DECODE</div>
+            <div class="stage-desc">Komut Çözme</div>
+            <div class="stage-instr" id="decode-instr">—</div>
+          </div>
+          <div class="pipeline-arrow">
+            <svg viewBox="0 0 40 24" fill="none"><path d="M0 12 L32 12 L24 6 M32 12 L24 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </div>
+          <div class="pipeline-stage" id="stage-execute">
+            <div class="stage-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <div class="stage-name">EXECUTE</div>
+            <div class="stage-desc">ALU İşlemi</div>
+            <div class="stage-instr" id="execute-instr">—</div>
+          </div>
+          <div class="pipeline-arrow">
+            <svg viewBox="0 0 40 24" fill="none"><path d="M0 12 L32 12 L24 6 M32 12 L24 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </div>
+          <div class="pipeline-stage" id="stage-writeback">
+            <div class="stage-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div class="stage-name">WRITE-BACK</div>
+            <div class="stage-desc">Sonuç Yazma</div>
+            <div class="stage-instr" id="writeback-instr">—</div>
+          </div>
+        </div>
+        <div class="current-instr-bar" id="current-instr-bar">
+          <span class="cib-label">Yürütülen Komut:</span>
+          <span class="cib-instr" id="cib-instr">—</span>
+          <span class="cib-cycle">Döngü: <strong id="cib-cycle">0</strong></span>
+        </div>
+      </div>
+
+      <!-- Vector Registers -->
+      <div class="card registers-card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="17" width="18" height="4" rx="1"/></svg>
+            Vektör Registerlari (128-bit · 4x int32)
+          </div>
+          <div class="register-view-toggle">
+            <button class="view-btn active" id="view-dec" data-view="dec">DEC</button>
+            <button class="view-btn" id="view-hex" data-view="hex">HEX</button>
+            <button class="view-btn" id="view-bin" data-view="bin">BIN</button>
+          </div>
+        </div>
+        <div class="registers-grid" id="registers-grid">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Execution Log -->
+      <div class="card log-card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+            Yürütme Günlüğü
+          </div>
+          <button class="btn-icon" id="btn-clear-log" title="Günlüğü Temizle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </div>
+        <div class="log-body" id="log-body">
+          <div class="log-entry log-info">
+            <span class="log-time">00:00</span>
+            <span class="log-msg">SIMD Simülatör başlatıldı. Komutlarınızı yazıp çalıştırın.</span>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- RIGHT PANEL: Memory + Performance -->
+    <aside class="panel panel-right">
+
+      <!-- Memory View -->
+      <div class="card memory-card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/></svg>
+            Bellek Monitörü
+          </div>
+          <span class="memory-size-badge">1KB</span>
+        </div>
+        <div class="memory-controls">
+          <input type="number" id="mem-jump-addr" placeholder="Adres (ör: 100)" min="0" max="255" />
+          <button class="btn btn-ghost btn-sm" id="btn-mem-jump">Git</button>
+        </div>
+        <div class="memory-table-wrapper">
+          <table class="memory-table">
+            <thead>
+              <tr>
+                <th>Adres</th>
+                <th>+0</th>
+                <th>+1</th>
+                <th>+2</th>
+                <th>+3</th>
+              </tr>
+            </thead>
+            <tbody id="memory-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Performance Stats -->
+      <div class="card perf-card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            Performans Analizi
+          </div>
+        </div>
+        <div class="perf-stats">
+          <div class="perf-stat">
+            <div class="perf-stat-label">Toplam Döngü</div>
+            <div class="perf-stat-value" id="stat-cycles">0</div>
+          </div>
+          <div class="perf-stat">
+            <div class="perf-stat-label">Çalıştırılan Komut</div>
+            <div class="perf-stat-value" id="stat-instr">0</div>
+          </div>
+          <div class="perf-stat">
+            <div class="perf-stat-label">İşlenen Eleman</div>
+            <div class="perf-stat-value" id="stat-elems">0</div>
+          </div>
+          <div class="perf-stat highlight">
+            <div class="perf-stat-label">Hızlanma (Scalar vs SIMD)</div>
+            <div class="perf-stat-value speedup" id="stat-speedup">—</div>
+          </div>
+        </div>
+        <div class="speedup-chart">
+          <div class="speedup-bar-group">
+            <div class="speedup-bar-label">Scalar</div>
+            <div class="speedup-bar-track">
+              <div class="speedup-bar scalar-bar" id="scalar-bar" style="width:100%">
+                <span id="scalar-ops">0 op</span>
+              </div>
+            </div>
+          </div>
+          <div class="speedup-bar-group">
+            <div class="speedup-bar-label">SIMD</div>
+            <div class="speedup-bar-track">
+              <div class="speedup-bar simd-bar" id="simd-bar" style="width:25%">
+                <span id="simd-ops">0 op</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="perf-note" id="perf-note">Kodu çalıştırın ve SIMD hızlanmasını görün.</div>
+      </div>
+
+      <!-- Flags / Status Register -->
+      <div class="card flags-card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+            Durum Bayrakları
+          </div>
+        </div>
+        <div class="flags-grid">
+          <div class="flag-item" id="flag-zero">
+            <div class="flag-led"></div>
+            <div class="flag-name">ZF</div>
+            <div class="flag-desc">Zero</div>
+          </div>
+          <div class="flag-item" id="flag-overflow">
+            <div class="flag-led"></div>
+            <div class="flag-name">OF</div>
+            <div class="flag-desc">Overflow</div>
+          </div>
+          <div class="flag-item" id="flag-negative">
+            <div class="flag-led"></div>
+            <div class="flag-name">NF</div>
+            <div class="flag-desc">Negative</div>
+          </div>
+          <div class="flag-item" id="flag-carry">
+            <div class="flag-led"></div>
+            <div class="flag-name">CF</div>
+            <div class="flag-desc">Carry</div>
+          </div>
+        </div>
+        <div class="mask-display" id="mask-display" style="display:none">
+          <div class="mask-label">Son Karşılaştırma Maskesi</div>
+          <div class="mask-value" id="mask-value">[0, 0, 0, 0]</div>
+        </div>
+      </div>
+
+    </aside>
+  </main>
+
+  <div id="toast-container"></div>
+
+  <script src="simulator.js"></script>
+</body>
+</html>
