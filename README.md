@@ -1,32 +1,30 @@
 # SIMD Simulator
 
-SIMD (Single Instruction, Multiple Data) vektör komut seti mimarisini ve düşük seviyeli donanım programlama prensiplerini web tabanlı bir arayüz üzerinden görselleştiren ve simüle eden interaktif bir araçtır. 
+An interactive tool that visualizes and simulates the SIMD (Single Instruction, Multiple Data) vector instruction set architecture and low-level hardware programming principles through a web-based interface.
 
-## 🚀 Özellikler
+## 🚀 Features
 
-- **Görsel Simülasyon:** Vektör tabanlı SIMD operasyonlarının etkileşimli bir şekilde görselleştirilmesi.
-- **Web Tabanlı Arayüz:** Herhangi bir kurulum gerektirmeyen, doğrudan tarayıcı üzerinde çalışan hafif yapı.
-- **Eğitim Odaklı Tasarım:** Bilgisayar mimarisi, mikroişlemci sistemleri ve donanım programlama mantığını pratik bir şekilde kavramak için geliştirilmiş altyapı.
+- **Visual Simulation:** Interactive visualization of vector-based SIMD operations.
+- **Web-Based Interface:** A lightweight structure that runs directly on the browser, requiring no installation.
+- **Education-Oriented Design:** An infrastructure developed to practically grasp computer architecture, microprocessor systems, and hardware programming logic.
 
-## 📂 Proje Yapısı
+## 📂 Project Structure
 
 ```text
 simd-simulator/
 │
-├── index.html       # Kullanıcı arayüzü ve ana web sayfası
-├── simulator.js     # Simülasyonun çekirdek mantığı, hesaplamalar ve vektör işlemleri
-├── style.css        # Görsel tasarım ve stiller
-└── out/             # Çıktı ve build dosyaları
+├── index.html       # User interface and main web page
+├── simulator.js     # Core logic of the simulation, calculations, and vector operations
+├── style.css        # Visual design and styles
+└── out/             # Output and build files
 ```
+## Installation and Usage
+ Since this project is developed using pure web technologies (Vanilla JS, HTML, CSS), it does not require an extra server or library installation.
 
-## 🛠️ Kurulum ve Kullanım
+Download or clone the project files to your computer.
 
-Bu proje saf web teknolojileri (Vanilla JS, HTML, CSS) kullanılarak geliştirildiği için ekstra bir sunucu veya kütüphane kurulumu gerektirmez.
+Open the index.html file inside the simd-simulator folder in any modern web browser (Chrome, Edge, Firefox, etc.).
 
-1. Proje dosyalarını bilgisayarınıza indirin veya klonlayın.
-2. `simd-simulator` klasörünün içindeki `index.html` dosyasını herhangi bir modern web tarayıcısında (Chrome, Edge, Firefox vb.) açın.
-3. Arayüz üzerindeki kontrolleri kullanarak SIMD komutlarını simüle edebilir ve sonuçları anlık olarak gözlemleyebilirsiniz.
-
-## 👨‍💻 Geliştirici
-
-Bu proje **Ömer ERTAN** tarafından tasarlanmış ve geliştirilmiştir.
+You can simulate SIMD instructions using the controls on the interface and observe the results in real-time.
+## Developer
+Ömer ERTAN
